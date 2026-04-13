@@ -35,4 +35,114 @@
 
 <div class="card">
     <div class="header">
-        <h2 id="category-title" style="margin:0; font-size: 1.
+        <h2 id="category-title" style="margin:0; font-size: 1.2rem;">Practice Quiz</h2>
+        <span id="standard-display" class="standard-tag"></span>
+    </div>
+
+    <div id="stimulus-area" class="stimulus-box">
+        </div>
+
+    <div id="question-body" class="question-text"></div>
+
+    <div id="options-area" class="options-grid"></div>
+
+    <div id="feedback"></div>
+
+    <div class="nav-controls">
+        <button id="next-button" class="next-btn">Next Question &rarr;</button>
+    </div>
+</div>
+
+<script>
+    let quizStore = [];
+    let currentIdx = 0;
+
+    // 1. Fetching the updated JSON
+    fetch('questions.json')
+        .then(response => {
+            if (!response.ok) throw new Error("Could not find questions.json");
+            return response.json();
+        })
+        .then(data => {
+            quizStore = data;
+            renderQuestion();
+        })
+        .catch(err => console.error(err));
+
+    function renderQuestion() {
+        const item = quizStore[currentIdx];
+        
+        // Reset UI
+        document.getElementById('feedback').style.display = 'none';
+        document.getElementById('next-button').style.display = 'none';
+        
+        // Populate Metadata
+        document.getElementById('standard-display').innerText = item.standard;
+        document.getElementById('category-title').innerText = item.category;
+        document.getElementById('question-body').innerText = item.question;
+
+        // Populate Stimulus (Image or Text)
+        const stimArea = document.getElementById('stimulus-area');
+        if (item.stimulus_type === 'image' && item.image_url) {
+            stimArea.innerHTML = `<img src="${item.image_url}" alt="Historical stimulus for question ${item.id}">`;
+        } else if (item.stimulus_content) {
+            stimArea.innerHTML = `<div class="stimulus-text">"${item.stimulus_content}"</div>`;
+        } else {
+            stimArea.style.display = 'none'; // Hide if neither exists
+        }
+
+        // Populate Options
+        const optionsArea = document.getElementById('options-area');
+        optionsArea.innerHTML = '';
+        item.options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = opt;
+            btn.onclick = () => handleChoice(btn, opt.charAt(0), item);
+            optionsArea.appendChild(btn);
+        });
+    }
+
+    function handleChoice(selectedBtn, letter, item) {
+        const feedback = document.getElementById('feedback');
+        const allButtons = document.querySelectorAll('.option-btn');
+        
+        // Disable all buttons after one is clicked
+        allButtons.forEach(b => b.style.pointerEvents = 'none');
+
+        if (letter === item.answer) {
+            selectedBtn.classList.add('correct-choice');
+            feedback.innerHTML = `<strong>Correct!</strong> ${item.explanation}`;
+            feedback.style.display = 'block';
+            feedback.style.background = '#d4edda';
+            feedback.style.color = '#155724';
+        } else {
+            selectedBtn.classList.add('incorrect-choice');
+            feedback.innerHTML = `<strong>Incorrect.</strong> ${item.explanation}`;
+            feedback.style.display = 'block';
+            feedback.style.background = '#f8d7da';
+            feedback.style.color = '#721c24';
+        }
+
+        document.getElementById('next-button').style.display = 'block';
+    }
+
+    document.getElementById('next-button').onclick = () => {
+        currentIdx++;
+        if (currentIdx < quizStore.length) {
+            renderQuestion();
+        } else {
+            // End of Quiz
+            document.querySelector('.card').innerHTML = `
+                <div style="text-align:center; padding: 40px;">
+                    <h2 style="color: var(--primary);">Review Complete!</h2>
+                    <p>You have finished the Early North America practice set.</p>
+                    <button onclick="location.reload()" class="next-btn" style="display:inline-block;">Start Over</button>
+                </div>
+            `;
+        }
+    };
+</script>
+
+</body>
+</html>
